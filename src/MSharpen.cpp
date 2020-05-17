@@ -8,6 +8,7 @@ class MSharpen : public GenericVideoFilter {
 	bool _mask;
 	bool _luma, _chroma;
 	bool processPlane[3];
+	bool has_at_least_v8;
 
 	template <typename T>
 	void msharpenEdgeMask(PVideoFrame& mask, PVideoFrame& blur, PVideoFrame& src, IScriptEnvironment* env);
@@ -169,7 +170,7 @@ void MSharpen::msharpenEdgeMask(PVideoFrame& mask, PVideoFrame& blur, PVideoFram
 		for (int x = 0; x < height[0] * stride[0]; x++)
 			maskp[0][x] = maskp[0][x] | maskp[1][x] | maskp[2][x];
 
-		memcpy(maskp[1], maskp[0], static_cast<__int64>(height[0]) * stride[0]);
+		memcpy(maskp[1], maskp[0], static_cast<int64_t>(height[0]) * stride[0]);
 		memcpy(maskp[2], maskp[0], static_cast<__int64>(height[0]) * stride[0]);
 	}
 }
@@ -240,6 +241,9 @@ static void copy_plane(PVideoFrame& dst, PVideoFrame& src, int plane, IScriptEnv
 MSharpen::MSharpen(PClip _child, float threshold, float strength, bool mask, bool luma, bool chroma, bool highq, IScriptEnvironment* env)
 	: GenericVideoFilter(_child), _threshold(threshold), _strength(strength), _mask(mask), _luma(luma), _chroma(chroma)
 {
+	has_at_least_v8 = true;
+	try { env->CheckVersion(8); } catch (const AvisynthError&) { has_at_least_v8 = false; }
+
 	int planecount = min(vi.NumComponents(), 3);
 	for (int i = 0; i < planecount; i++)
 	{
@@ -276,7 +280,8 @@ PVideoFrame MSharpen::GetFrame(int n, IScriptEnvironment* env)
 {
 	PVideoFrame src = child->GetFrame(n, env);
 	PVideoFrame blur = env->NewVideoFrame(vi);
-	PVideoFrame dst = env->NewVideoFrame(vi);
+	PVideoFrame dst;
+	if (has_at_least_v8) dst = env->NewVideoFrameP(vi, &src); else dst = env->NewVideoFrame(vi);
 
 	if (vi.BitsPerComponent() == 8)
 	{
