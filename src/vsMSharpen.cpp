@@ -16,7 +16,7 @@ class MSharpen : public GenericVideoFilter {
 	void sharpen(PVideoFrame& dst, PVideoFrame& blur, PVideoFrame& src, IScriptEnvironment* env);
 
 public:
-	MSharpen(PClip _child, float threshold, float strength, bool mask, bool luma, bool chroma, bool highq, IScriptEnvironment* env);
+	MSharpen(PClip _child, float threshold, float strength, bool mask, bool luma, bool chroma, IScriptEnvironment* env);
 	PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
 	int __stdcall SetCacheHints(int cachehints, int frame_range)
 	{
@@ -238,7 +238,7 @@ static void copy_plane(PVideoFrame& dst, PVideoFrame& src, int plane, IScriptEnv
 	env->BitBlt(destp, dst_pitch, srcp, src_pitch, row_size, height);
 }
 
-MSharpen::MSharpen(PClip _child, float threshold, float strength, bool mask, bool luma, bool chroma, bool highq, IScriptEnvironment* env)
+MSharpen::MSharpen(PClip _child, float threshold, float strength, bool mask, bool luma, bool chroma, IScriptEnvironment* env)
 	: GenericVideoFilter(_child), _threshold(threshold), _strength(strength), _mask(mask), _luma(luma), _chroma(chroma)
 {
 	has_at_least_v8 = true;
@@ -267,12 +267,12 @@ MSharpen::MSharpen(PClip _child, float threshold, float strength, bool mask, boo
 
 	if (threshold < 0.0 || threshold > 100.0)
 	{
-		env->ThrowError("MSharpen: threshold must be between 0 and 100 %.");
+		env->ThrowError("MSharpen: threshold must be between 0..100.");
 	}
 
 	if (strength < 0.0 || strength > 100.0)
 	{
-		env->ThrowError("MSharpen: strength must be between 0 and 100 %.");
+		env->ThrowError("MSharpen: strength must be between 0..100.");
 	}
 }
 
@@ -309,7 +309,14 @@ PVideoFrame MSharpen::GetFrame(int n, IScriptEnvironment* env)
 
 AVSValue __cdecl Create_MSharpen(AVSValue args, void* user_data, IScriptEnvironment* env)
 {
-	return new MSharpen(args[0].AsClip(), args[1].AsFloat(6.0), args[2].AsFloat(39.0), args[3].AsBool(false), args[4].AsBool(true), args[5].AsBool(false), args[6].AsBool(true), env);
+	return new MSharpen(
+		args[0].AsClip(),
+		args[1].AsFloat(6.0),
+		args[2].AsFloat(39.0),
+		args[3].AsBool(false),
+		args[4].AsBool(true),
+		args[5].AsBool(false),		
+		env);
 }
 
 const AVS_Linkage* AVS_linkage;
@@ -319,6 +326,6 @@ const char* __stdcall AvisynthPluginInit3(IScriptEnvironment* env, const AVS_Lin
 {
 	AVS_linkage = vectors;
 
-	env->AddFunction("MSharpen", "c[threshold]f[strength]f[mask]b[luma]b[chroma]b[highq]b", Create_MSharpen, NULL);
-	return "MSharpen";
+	env->AddFunction("vsMSharpen", "c[threshold]f[strength]f[mask]b[luma]b[chroma]b", Create_MSharpen, NULL);
+	return "vsMSharpen";
 }
