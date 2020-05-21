@@ -1,4 +1,5 @@
-- 2.0.0 - Change the plugin name to vsMSharpen
+- 2.0.0 - Change the plugin name to vsMSharpen.\
+          Remove highq parameter.
 
 - 1.2.0 - Add support for v8 interface.
 
