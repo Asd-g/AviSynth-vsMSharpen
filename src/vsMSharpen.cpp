@@ -3,8 +3,8 @@
 #include <avisynth.h>
 
 class MSharpen : public GenericVideoFilter {
-	double _threshold;
-	double _strength;
+	float _threshold;
+	float _strength;
 	bool _mask;
 	bool _luma, _chroma;
 	bool processPlane[3];
@@ -25,11 +25,12 @@ public:
 };
 
 template <typename T>
-static inline void blur3x3(void* maskpv, const void* srcpv, int stride, int width, int height) {
+static inline void blur3x3(void* maskpv, const void* srcpv, int stride, int bstride, int width, int height) {
 	T* maskp = (T*)maskpv;
 	const T* srcp = (const T*)srcpv;
 
 	stride /= sizeof(T);
+	bstride /= sizeof(T);
 
 	maskp[0] = (srcp[0] + srcp[1] +
 		srcp[stride] + srcp[stride + 1]) / 4;
@@ -42,7 +43,7 @@ static inline void blur3x3(void* maskpv, const void* srcpv, int stride, int widt
 		srcp[width + stride - 2] + srcp[width + stride - 1]) / 4;
 
 	srcp += stride;
-	maskp += stride;
+	maskp += bstride;
 
 	for (int y = 1; y < height - 1; y++) {
 		maskp[0] = (srcp[-stride] + srcp[-stride + 1] +
@@ -59,7 +60,7 @@ static inline void blur3x3(void* maskpv, const void* srcpv, int stride, int widt
 			srcp[width + stride - 2] + srcp[width + stride - 1]) / 6;
 
 		srcp += stride;
-		maskp += stride;
+		maskp += bstride;
 	}
 
 	maskp[0] = (srcp[-stride] + srcp[-stride + 1] +
@@ -133,6 +134,8 @@ void MSharpen::msharpenEdgeMask(PVideoFrame& mask, PVideoFrame& blur, PVideoFram
 	int width[3];
 	int height[3];
 	int stride[3];
+	int bstride[3];
+	int mstride[3];
 
 	int maximum = 0xffff >> (16 - vi.BitsPerComponent());
 	int threshold = (int)((_threshold * maximum) / 100);
@@ -154,15 +157,17 @@ void MSharpen::msharpenEdgeMask(PVideoFrame& mask, PVideoFrame& blur, PVideoFram
 		}
 
 		stride[i] = src->GetPitch(plane);
+		bstride[i] = blur->GetPitch(plane);
+		mstride[i] = mask->GetPitch(plane);
 		width[i] = src->GetRowSize(plane) / vi.ComponentSize();
 		height[i] = src->GetHeight(plane);
 		srcp[i] = src->GetReadPtr(plane);
 		maskp[i] = mask->GetWritePtr(plane);
 		blurp[i] = blur->GetWritePtr(plane);
 
-		blur3x3<T>(blurp[i], srcp[i], stride[i], width[i], height[i]);
+		blur3x3<T>(blurp[i], srcp[i], stride[i], bstride[i], width[i], height[i]);
 
-		msharpenFindEdges<T>(maskp[i], blurp[i], stride[i], width[i], height[i], threshold, maximum);
+		msharpenFindEdges<T>(maskp[i], blurp[i], mstride[i], width[i], height[i], threshold, maximum);
 	}
 
 	if (vi.IsPlanarRGB())
@@ -200,6 +205,8 @@ void MSharpen::sharpen(PVideoFrame& dst, PVideoFrame& blur, PVideoFrame& src, IS
 		}
 
 		int stride = src->GetPitch(plane);
+		int bstride = blur->GetPitch(plane);
+		int dstride = dst->GetPitch(plane);
 		int width = src->GetRowSize(plane) / vi.ComponentSize();
 		int height = src->GetHeight(plane);
 		const T* srcp = (const T*)src->GetReadPtr(plane);
@@ -207,6 +214,8 @@ void MSharpen::sharpen(PVideoFrame& dst, PVideoFrame& blur, PVideoFrame& src, IS
 		T* dstp = (T*)dst->GetWritePtr(plane);
 
 		stride /= sizeof(T);
+		dstride /= sizeof(T);
+		bstride /= sizeof(T);
 
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -222,13 +231,14 @@ void MSharpen::sharpen(PVideoFrame& dst, PVideoFrame& blur, PVideoFrame& src, IS
 			}
 
 			srcp += stride;
-			dstp += stride;
-			blurp += stride;
+			dstp += dstride;
+			blurp += bstride;
 		}
 	}
 }
 
-static void copy_plane(PVideoFrame& dst, PVideoFrame& src, int plane, IScriptEnvironment* env) {
+static void copy_plane(PVideoFrame& dst, PVideoFrame& src, int plane, IScriptEnvironment* env)
+{
 	const uint8_t* srcp = src->GetReadPtr(plane);
 	int src_pitch = src->GetPitch(plane);
 	int height = src->GetHeight(plane);
@@ -265,14 +275,14 @@ MSharpen::MSharpen(PClip _child, float threshold, float strength, bool mask, boo
 		env->ThrowError("MSharpen: Only 8..16 bit integer input supported.");
 	}
 
-	if (threshold < 0.0 || threshold > 100.0)
+	if (threshold < 0.f || threshold > 100.f)
 	{
-		env->ThrowError("MSharpen: threshold must be between 0..100.");
+		env->ThrowError("MSharpen: threshold must be between 0.0..100.0.");
 	}
 
-	if (strength < 0.0 || strength > 100.0)
+	if (strength < 0.f || strength > 100.f)
 	{
-		env->ThrowError("MSharpen: strength must be between 0..100.");
+		env->ThrowError("MSharpen: strength must be between 0.0..100.0.");
 	}
 }
 
@@ -311,8 +321,8 @@ AVSValue __cdecl Create_MSharpen(AVSValue args, void* user_data, IScriptEnvironm
 {
 	return new MSharpen(
 		args[0].AsClip(),
-		args[1].AsFloat(6.0),
-		args[2].AsFloat(39.0),
+		args[1].AsFloatf(6),
+		args[2].AsFloatf(39),
 		args[3].AsBool(false),
 		args[4].AsBool(true),
 		args[5].AsBool(false),		
