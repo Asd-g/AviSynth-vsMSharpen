@@ -267,22 +267,22 @@ MSharpen::MSharpen(PClip _child, float threshold, float strength, bool mask, boo
 
 	if (!vi.IsPlanar())
 	{
-		env->ThrowError("MSharpen: Clip must be in planar format.");
+		env->ThrowError("vsMSharpen: Clip must be in planar format.");
 	}
 
 	if (vi.BitsPerComponent() == 32)
 	{
-		env->ThrowError("MSharpen: Only 8..16 bit integer input supported.");
+		env->ThrowError("vsMSharpen: Only 8..16 bit integer input supported.");
 	}
 
 	if (threshold < 0.f || threshold > 100.f)
 	{
-		env->ThrowError("MSharpen: threshold must be between 0.0..100.0.");
+		env->ThrowError("vsMSharpen: threshold must be between 0.0..100.0.");
 	}
 
 	if (strength < 0.f || strength > 100.f)
 	{
-		env->ThrowError("MSharpen: strength must be between 0.0..100.0.");
+		env->ThrowError("vsMSharpen: strength must be between 0.0..100.0.");
 	}
 }
 
