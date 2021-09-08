@@ -1,16 +1,22 @@
-# Description
+## Description
 
 MSharpen is a sharpener that tries to sharpen only edges.
 
 This plugin is [a port of the VapourSynth plugin MSharpen](https://github.com/dubhater/vapoursynth-msmoosh).
 
-# Usage
+### Requirements:
+
+- AviSynth 2.60 / AviSynth+ 3.4 or later
+
+- Microsoft VisualC++ Redistributable Package 2022 (can be downloaded from [here](https://github.com/abbodi1406/vcredist/releases))
+
+### Usage:
 
 ```
 vsMSharpen (clip, float "threshold", float "strength", bool "mask", bool "luma", bool "chroma")
 ```
 
-## Parameters:
+### Parameters:
 
 - clip\
     Clip to process. It must be in 8..16-bit planar format.
